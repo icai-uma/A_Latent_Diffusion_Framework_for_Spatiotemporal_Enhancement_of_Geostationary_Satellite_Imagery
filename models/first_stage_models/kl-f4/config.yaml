@@ -1,0 +1,68 @@
+model:
+  base_learning_rate: 4.5e-06
+  target: ldm.models.autoencoder.AutoencoderKL
+  params:
+    monitor: val/rec_loss
+    ckpt_path: pretrained/ae_klf4/model.ckpt
+    embed_dim: 3
+    lossconfig:
+      target: ldm.modules.losses.LPIPSWithDiscriminator
+      params:
+        disc_start: 50001
+        kl_weight: 1.0e-06
+        disc_weight: 0.5
+    ddconfig:
+      double_z: true
+      z_channels: 3
+      resolution: 320
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult:
+      - 1
+      - 2
+      - 4
+      num_res_blocks: 2
+      attn_resolutions: []
+      dropout: 0.0
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 1
+    wrap: false
+    num_workers: 3
+    train:
+      target: ldm.data.datasetsr_unzip.DatasetSRTrain
+      params:
+        size: 320
+        degradation: bsrgan_light
+        downscale_f: 4
+        min_crop_f: 0.5
+        max_crop_f: 1.0
+        random_crop: false
+    validation:
+      target: ldm.data.datasetsr_unzip.DatasettSRValidation
+      params:
+        size: 320
+        degradation: bsrgan_light
+        downscale_f: 4
+        min_crop_f: 0.5
+        max_crop_f: 1.0
+        random_crop: false
+        
+lightning:
+  modelcheckpoint:
+    params:
+      every_n_train_steps: 500
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 1086
+        max_images: 1
+        increase_log_steps: False
+
+  trainer:
+    benchmark: True
+    max_epochs: 10
+    gpus: 0,1,2,3
